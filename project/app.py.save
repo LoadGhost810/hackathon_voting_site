@@ -1,0 +1,53 @@
+from flask import Flask, render_template, request, jsonify
+from nltk.chat.util import Chat, reflections
+
+app = Flask(__name__)
+
+class VotingSystem:
+    def __init__(self, options):
+        self.options = options
+        self.votes = {option: 0 for option in options}
+
+    def vote(self, option):
+        if option in self.options:
+            self.votes[option] += 1
+            return f"Your vote for '{option}' has been recorded."
+        else:
+            return "Invalid option. Please vote for one of the available options."
+
+    def get_results(self):
+        results = {option: votes for option, votes in self.votes.items()}
+        return results
+
+voting_system = VotingSystem(['Option A', 'Option B', 'Option C'])  # Initialize voting system
+
+patterns = [
+    (r'hi|hello|hey', ['Hello!', 'Hi there!', 'Hey!']),
+    (r'how are you?', ['I am doing well, thank you!', 'I\'m fine, thanks!']),
+    (r'what is your name?', ['You can call me ChatBot.', 'I am just a bot.']),
+    (r'bye|goodbye', ['Goodbye!', 'Bye! Take care.']),
+]
+
+chatbot = Chat(patterns, reflections)
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    user_input = request.json.get('message')
+    
+    if user_input.startswith('vote'):
+        option = user_input.split(' ', 1)[-1].strip()
+        response = voting_system.vote(option)
+    elif user_input == 'results':
+        response = voting_system.get_results()
+    else:
+        response = chatbot.respond(user_input)
+
+    return jsonify({'response': response})
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
